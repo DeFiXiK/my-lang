@@ -2,7 +2,7 @@ module Tokens (ParserError(..), Token(..), parse, TokenType(..)) where
 
 import           Control.Monad (foldM)
 import           Data.Char     (isDigit, isLetter)
-import           Data.Maybe    (fromJust)
+import           Data.Maybe    (fromJust, fromMaybe)
 import           Data.Text     (Text)
 import qualified Data.Text     as T
 
@@ -208,15 +208,12 @@ advance' StateFree line pos char
 advance' (StateAlpha buf tokpos) line pos char
     | ct == Just CharLetter =
         AdvNoToken (StateAlpha newBuf tokpos)
-    | char == Nothing =
-        AdvToken StateFree (Token (TokIdent buf) line tokpos)
-    | ct == Just CharWhitespace =
-        AdvToken StateFree (Token (TokIdent buf) line tokpos)
-    | ct == Just CharNewline =
-        AdvToken StateFree (Token (TokIdent buf) line tokpos)
+    | char == Nothing || ct == Just CharWhitespace || ct == Just CharNewline =
+        AdvToken StateFree (Token identOrKeyword line tokpos)
     | otherwise =
         AdvError (ParserError line pos ("Неожиданный символ, " ++ show (fromJust char)))
     where
+        identOrKeyword = fromMaybe (TokIdent buf) $ fromWords buf
         ct = fmap charType char
         newBuf = buf ++ [fromJust char]
 
