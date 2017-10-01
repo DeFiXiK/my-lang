@@ -2,7 +2,7 @@ module Tokens (ParserError(..), Token(..), parse, TokenType(..)) where
 
 import           Control.Monad (foldM)
 import           Data.Char     (isDigit, isLetter)
-import           Data.Maybe    (fromJust, fromMaybe)
+import           Data.Maybe    (fromJust, fromMaybe, isJust)
 import           Data.Text     (Text)
 import qualified Data.Text     as T
 
@@ -141,6 +141,11 @@ data ParserState
     = StateFree
     -- Состояние чтения идентификаторов, ключевых слов.
     | StateAlpha String Int
+    -- Состояние чтения операторов.
+    | StateOper String Int
+    -- Состояние комментария.
+    | StateComment Char
+
 
 data Parser = Parser
     { parserState      :: ParserState
@@ -193,7 +198,9 @@ data AdvanceResult
 advance' :: ParserState -> Int -> Int -> Maybe Char -> AdvanceResult
 advance' StateFree line pos char
     | ct == Just CharLetter =
-        AdvNotConsumed $ StateAlpha [] pos
+        AdvNotConsumed (StateAlpha [] pos)
+    | ct == Just CharSpecial =
+        AdvNotConsumed (StateOper [] pos)
     | char == Nothing =
         AdvNoToken StateFree
     | ct == Just CharWhitespace =
@@ -216,6 +223,30 @@ advance' (StateAlpha buf tokpos) line pos char
         identOrKeyword = fromMaybe (TokIdent buf) $ fromWords buf
         ct = fmap charType char
         newBuf = buf ++ [fromJust char]
+advance' (StateOper buf tokpos) line pos char
+    | ct == Just CharSpecial =
+        case newBuf of
+            "/*" ->
+                AdvNoToken (StateComment 'Ƀ')
+            _ -> AdvNoToken (StateOper newBuf tokpos)
+    | otherwise =
+        case maybeOper of
+            Just oper ->
+                AdvNotConsumedToken StateFree (Token oper line tokpos)
+            Nothing ->
+                AdvError (ParserError line pos ("Оператор " ++ buf ++ " не существует"))
+    where
+        maybeOper = fromOperator buf
+        ct = fmap charType char
+        newBuf = buf ++ [fromJust char]
+advance' (StateComment lastChar) line pos char
+    | lastChar == '*' && char == Just '/' =
+        AdvNoToken StateFree
+    | isJust char =
+        AdvNoToken (StateComment $ fromJust char)
+    | char == Nothing =
+        AdvError (ParserError line pos ("Неожиданный конец файла в середине комментария"))
+
 
 parse :: Text -> Either ParserError [Token]
 parse text =
