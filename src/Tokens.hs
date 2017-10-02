@@ -2,12 +2,13 @@ module Tokens (ParserError(..), Token(..), parse, TokenType(..)) where
 
 import           Control.Monad (foldM)
 import           Data.Char     (isDigit, isLetter)
-import           Data.Maybe    (fromJust, fromMaybe, isJust)
+import           Data.List     (elemIndex)
+import           Data.Maybe    (fromJust, fromMaybe, isJust, isNothing)
 import           Data.Text     (Text)
 import qualified Data.Text     as T
 
 data TokenType
-    = TokInteger Integer Integer -- Целое число и система счисления
+    = TokInteger Int Int -- Целое число и система счисления
     | TokReal Double -- Дробное число
     -- Логические операторы
     | TokNotEqual -- !=
@@ -122,6 +123,7 @@ data CharType
     | CharDigit      -- 0-9
     | CharLetter     -- a-z, A-Z
     | CharSpecial    -- special symbols: comma, period and so on
+    | CharSemicolon
     | CharOther
     deriving (Eq)
 
@@ -134,6 +136,7 @@ charType ch
     | isDigit ch = CharDigit
     | isLetter ch = CharLetter
     | ch `elem` ":<>=+-*/()%!$[].,{}" = CharSpecial
+    | ch == ';' = CharSemicolon
     | otherwise = CharOther
 
 data ParserState
@@ -145,6 +148,8 @@ data ParserState
     | StateOper String Int
     -- Состояние комментария.
     | StateComment Char
+    -- Состояние чтение целых чисел.
+    | StateInteger String Int
 
 
 data Parser = Parser
@@ -159,6 +164,39 @@ data ParserError = ParserError
     , errorPos  :: Int
     , errorMsg  :: String
     }
+
+readBase :: Int -> String -> Maybe (Int, Int)
+readBase = readBase' 0
+
+-- |Reads a number from string with given base.
+readBase' :: Int -> Int -> String -> Maybe (Int, Int)
+readBase' acc base "" = Just (acc, base)
+readBase' acc base (c:cs)
+    | isNothing charDigit = Nothing
+    | fromJust charDigit >= base = Nothing
+    | otherwise = readBase' (acc * base + fromJust charDigit) base cs
+    where
+        digit char
+            | isDigit char = elemIndex char "0123456789"
+            | char `elem` "abcdef" = (+ 10) <$> elemIndex char "abcdef"
+            | char `elem` "ABCDEF" = (+ 10) <$> elemIndex char "ABCDEF"
+            | otherwise = Nothing
+        charDigit = digit c
+
+
+
+parseInt :: String -> Maybe (Int, Int)
+parseInt str
+    | head str == 'b' || head str == 'B' =
+        readBase 2 (tail str)
+    | head str == 'o' || head str == 'O' =
+        readBase 8 (tail str)
+    | head str == 'd' || head str == 'D' =
+        readBase 10 (tail str)
+    | head str == 'h' || head str == 'H' =
+        readBase 16 (tail str)
+    | otherwise =
+        readBase 10 str
 
 newParser :: Parser
 newParser = Parser StateFree 1 1 []
@@ -201,6 +239,10 @@ advance' StateFree line pos char
         AdvNotConsumed (StateAlpha [] pos)
     | ct == Just CharSpecial =
         AdvNotConsumed (StateOper [] pos)
+    | ct == Just CharDigit =
+        AdvNotConsumed (StateInteger [] pos)
+    | ct == Just CharSemicolon =
+        AdvToken StateFree (Token TokSemicolon line pos)
     | char == Nothing =
         AdvNoToken StateFree
     | ct == Just CharWhitespace =
@@ -215,10 +257,8 @@ advance' StateFree line pos char
 advance' (StateAlpha buf tokpos) line pos char
     | ct == Just CharLetter =
         AdvNoToken (StateAlpha newBuf tokpos)
-    | char == Nothing || ct == Just CharWhitespace || ct == Just CharNewline =
-        AdvToken StateFree (Token identOrKeyword line tokpos)
     | otherwise =
-        AdvError (ParserError line pos ("Неожиданный символ, " ++ show (fromJust char)))
+        AdvNotConsumedToken StateFree (Token identOrKeyword line tokpos)
     where
         identOrKeyword = fromMaybe (TokIdent buf) $ fromWords buf
         ct = fmap charType char
@@ -245,8 +285,17 @@ advance' (StateComment lastChar) line pos char
     | isJust char =
         AdvNoToken (StateComment $ fromJust char)
     | char == Nothing =
-        AdvError (ParserError line pos ("Неожиданный конец файла в середине комментария"))
-
+        AdvError (ParserError line pos "Неожиданный конец файла в середине комментария")
+advance' (StateInteger buf tokpos) line pos char
+    | ct == Just CharDigit =
+        AdvNoToken (StateInteger newBuf tokpos)
+    | otherwise =
+        case parseInt buf of
+            Just (num, base) -> AdvNotConsumedToken StateFree (Token (TokInteger num base) line tokpos)
+            Nothing -> AdvError (ParserError line pos "Невалидное число")
+    where
+        ct = fmap charType char
+        newBuf = buf ++ [fromJust char]
 
 parse :: Text -> Either ParserError [Token]
 parse text =
