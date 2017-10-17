@@ -262,12 +262,12 @@ advance' :: ParserState -> Int -> Int -> Maybe Char -> AdvanceResult
 advance' StateFree line pos char
     | ct == Just CharLetter =
         AdvNotConsumed (StateAlpha [] pos)
+    | char == Just '.' =
+        AdvNoToken (StateFractional 0 "" pos)
     | ct == Just CharSpecial =
         AdvNotConsumed (StateOper [] pos)
     | ct == Just CharDigit =
         AdvNotConsumed (StateInteger [] pos)
-    | char == Just '.' =
-        AdvNoToken (StateFractional 0 "" pos)
     | ct == Just CharSemicolon =
         AdvToken StateFree (Token TokSemicolon line pos)
     | ct == Just CharTypes =
@@ -330,7 +330,7 @@ advance' (StateInteger buf tokpos) line pos char
             Just (num, base) -> AdvNotConsumedToken StateFree (Token (TokInteger num base) line tokpos)
             Nothing  -> case parseWeirdDouble buf of
                 Just dbl -> AdvNotConsumedToken StateFree (dblToken dbl)
-                Nothing -> AdvError $ ParserError line tokpos "Integer has incorrect format"
+                Nothing -> AdvError $ ParserError line tokpos "Целое число имеет невалидный формат"
     where
         ct = fmap charType char
         newBuf = buf ++ [fromJust char]
