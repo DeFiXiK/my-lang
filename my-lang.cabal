@@ -23,3 +23,6 @@ executable my-lang
                      , split
   other-modules:       Tokens
                      , Table
+                     , Parcomb
+                     , Syntax
+                     , Traverse

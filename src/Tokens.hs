@@ -76,6 +76,8 @@ fromWords wds = case wds of
     "if"      -> Just TokIf
     "not"     -> Just TokNot
     "else"    -> Just TokElse
+    "true"    -> Just TokTrue
+    "false"   -> Just TokFalse
     "int"     -> Just TokInt
     "float"   -> Just TokFloat
     "bool"    -> Just TokBool
@@ -141,7 +143,7 @@ charType ch
     | isDigit ch = CharDigit
     | isLetter ch = CharLetter
     | ch `elem` "()[]{}" = CharBracket
-    | ch `elem` ":<>=+-*/.," = CharSpecial
+    | ch `elem` ":<>=+-*/.,&|!" = CharSpecial
     | ch == ';' = CharSemicolon
     | otherwise = CharOther
 
