@@ -1,5 +1,6 @@
 module Main where
 
+import qualified Compile            as Comp
 import           Control.Monad
 import qualified Data.Text.IO       as TIO
 import qualified Syntax             as Syn
@@ -75,8 +76,25 @@ synParseAndPrint path = do
                 Right prg ->
                     asttraverse synPrint prg 0
 
+asmParseAndPrint :: String -> IO ()
+asmParseAndPrint path = do
+    text <- TIO.readFile path
+    case Tok.parse text of
+        Left (Tok.ParserError line pos msg) ->
+            putStrLn ("L:" ++ show line ++ ":" ++ show pos ++ ": " ++ msg)
+        Right tokens ->
+            case Syn.parse tokens of
+                Left (Syn.ParserError msg line pos) ->
+                    putStrLn ("S:" ++ show line ++ ":" ++ show pos ++ ": " ++ show msg)
+                Right prg ->
+                    case Comp.compile prg of
+                        Left (Comp.Error msg) ->
+                            putStrLn $ "C:" ++ ":" ++ ": " ++ msg
+                        Right instr ->
+                            forM_ (toEnumList instr) (\(i, ins) -> putStrLn $ show i ++ " @ " ++ " : " ++ show ins)
+
 main :: IO ()
 main = do
     args <- getArgs
-    synParseAndPrint $ head args
+    asmParseAndPrint $ head args
     -- parseAndPrint $ head args

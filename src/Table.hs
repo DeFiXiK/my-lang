@@ -1,12 +1,14 @@
 module Table
-( Table
-, empty
-, tableList
-, toList
-, append
-, tlookup
-, find
-) where
+    ( Table
+    , empty
+    , tableList
+    , toList
+    , toEnumList
+    , append
+    , set
+    , tlookup
+    , find
+    ) where
 
 import           Data.List  (intercalate)
 import qualified Data.Map   as M
@@ -35,12 +37,21 @@ tableList = foldl (\tbl el -> snd $ append tbl el) empty
 toList :: Table a -> [a]
 toList tbl = fmap (fromJust . tlookup tbl) [0..tableSize tbl - 1]
 
+toEnumList :: Table a -> [(Int, a)]
+toEnumList tbl = fmap (\i -> (i, fromJust $ tlookup tbl i)) [0..tableSize tbl - 1]
+
 append :: Table a -> a -> (Int, Table a)
 append (Table oldLookup oldSize) el =
     (oldSize, Table newLookup newSize)
     where
         newLookup = M.insert oldSize el oldLookup
         newSize = oldSize + 1
+
+set :: Table a -> Int -> a -> Table a
+set (Table oldLookup size) ind el =
+    if ind < 0 || ind >= size
+    then error "Index out of range"
+    else Table (M.insert ind el oldLookup) size
 
 tlookup :: Table a -> Int -> Maybe a
 tlookup table index = M.lookup index (tableLookup table)
@@ -52,5 +63,3 @@ find table searched = M.foldlWithKey search Nothing (tableLookup table)
             | el == searched = Just ind
             | otherwise = Nothing
         search (Just ind) _ _ = Just ind
-
-

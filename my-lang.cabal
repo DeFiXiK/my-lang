@@ -26,3 +26,5 @@ executable my-lang
                      , Parcomb
                      , Syntax
                      , Traverse
+                     , Exec
+                     , Compile
