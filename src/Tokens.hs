@@ -340,28 +340,28 @@ advance' (StateInteger buf tokpos) line pos char
 advance' (StateFractional whole buf tokpos) line _ char
     | ct == Just CharDigit =
         AdvNoToken (StateFractional whole newBuf tokpos)
-        | char == Just 'e' || char == Just 'E' =
-            case bufDouble of
-                Just double ->
-                    -- AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 11")
-                    AdvNoToken (StateExpSign double tokpos)
-                Nothing ->
-                    AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 22")
-        | maybe False (`elem` [CharWhitespace, CharNewline, CharSpecial, CharSemicolon]) ct || isNothing char =
-            case bufDouble of
-                Just double ->
-                    AdvNotConsumedToken StateFree (Token (TokReal double) line tokpos)
-                Nothing ->
-                    AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 33")
-        | otherwise =
-            AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 44")
-        where
-            ct = fmap charType char
-            newBuf = buf++[fromJust char]
-            bufDouble = do
-                bufNum <- readMaybe buf
-                let bufDiv = 10 ^ length buf
-                return $ fromIntegral whole + (bufNum / bufDiv)
+    | char == Just 'e' || char == Just 'E' =
+        case bufDouble of
+            Just double ->
+                -- AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 11")
+                AdvNoToken (StateExpSign double tokpos)
+            Nothing ->
+                AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 22")
+    | maybe False (`elem` [CharWhitespace, CharNewline, CharSpecial, CharSemicolon, CharBracket]) ct || isNothing char =
+        case bufDouble of
+            Just double ->
+                AdvNotConsumedToken StateFree (Token (TokReal double) line tokpos)
+            Nothing ->
+                AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 33")
+    | otherwise =
+        AdvError (ParserError line tokpos "Дробное число имеет невалидный формат 44")
+    where
+        ct = fmap charType char
+        newBuf = buf++[fromJust char]
+        bufDouble = do
+            bufNum <- readMaybe buf
+            let bufDiv = 10 ^ length buf
+            return $ fromIntegral whole + (bufNum / bufDiv)
 advance' (StateExpSign mant tokpos) line _ char
     | char == Just '+' =
         AdvNoToken (StateExpVal mant SignPos "" tokpos)

@@ -96,7 +96,7 @@ gettype :: String -> Compiler Type
 gettype varname  = Compiler (\st@(State _ _ tm) ->
     case M.lookup varname tm of
         Just t  -> Right (t, st)
-        Nothing -> Left $ Error ("Undefined variable '" ++ varname ++ "'"))
+        Nothing -> Left $ Error ("Необьявленная переменная '" ++ varname ++ "'"))
 
 settype :: String -> Type -> Compiler ()
 settype varname tp = Compiler (\(State is tc tm) ->
@@ -132,7 +132,7 @@ compileMultiplier (Syn.MultBool bool) = do
 compileMultiplier (Syn.MultNot mulr) = do
     (varname, tp) <- compileMultiplier mulr
     when (tp /= TypeBool) $
-        cerror $ "Can't apply 'not' operator to a value of type " ++ show tp
+        cerror $ "Нельзя применить оператор 'not' к значению типа " ++ show tp
     outname <- tmpvar (defaultOf TypeBool)
     ins (Exec.INot varname outname)
     return (outname, TypeBool)
@@ -159,7 +159,7 @@ compileMultiplication (Syn.Multiplication mulr oppairs) = do
                     ins $ Exec.IMulF outvar varx outvar
                     return ()
                 (Syn.MultOpMult, _, _) ->
-                    cerror $ "Cannot multiply values of type " ++ show typ ++ " and " ++ show typx
+                    cerror $ "Нельзя умножать значения типов " ++ show typ ++ " и " ++ show typx
 
                 (Syn.MultOpDiv, TypeInt, TypeInt) -> do
                     ins $ Exec.IDivI outvar varx outvar
@@ -168,13 +168,13 @@ compileMultiplication (Syn.Multiplication mulr oppairs) = do
                     ins $ Exec.IDivF outvar varx outvar
                     return ()
                 (Syn.MultOpDiv, _, _) ->
-                    cerror $ "Cannot divide values of type " ++ show typ ++ " and " ++ show typx
+                    cerror $ "Нельзя делить значения типов " ++ show typ ++ " и " ++ show typx
 
                 (Syn.MultOpAnd, TypeBool, TypeBool) -> do
                     ins (Exec.IAnd outvar varx outvar)
                     return ()
                 (Syn.MultOpAnd, _, _) ->
-                    cerror $ "Cannot apply AND operator to values of type " ++ show typ ++ " and " ++ show typx)
+                    cerror $ "Нельзя применить оператор AND к значениям типов " ++ show typ ++ " и " ++ show typx)
 
         return (outvar, typ)
 
@@ -198,7 +198,7 @@ compileSummation (Syn.Summation muln oppairs) = do
                     ins $ Exec.IAddF outvar varx outvar
                     return ()
                 (Syn.SumPlus, _, _) ->
-                    cerror $ "Cannot add values of type " ++ show typ ++ " and " ++ show typx
+                    cerror $ "Нельзя складывать значения типов " ++ show typ ++ " и " ++ show typx
 
                 (Syn.SumMinus, TypeInt, TypeInt) -> do
                     ins $ Exec.ISubI outvar varx outvar
@@ -207,13 +207,13 @@ compileSummation (Syn.Summation muln oppairs) = do
                     ins $ Exec.ISubF outvar varx outvar
                     return ()
                 (Syn.SumMinus, _, _) ->
-                    cerror $ "Cannot subtract values of type " ++ show typ ++ " and " ++ show typx
+                    cerror $ "Нельзя вычитать значения типов " ++ show typ ++ " и " ++ show typx
 
                 (Syn.SumOr, TypeBool, TypeBool) -> do
                     ins (Exec.IOr outvar varx outvar)
                     return ()
                 (Syn.SumOr, _, _) ->
-                    cerror $ "Cannot apply OR operator to values of type " ++ show typ ++ " and " ++ show typx)
+                    cerror $ "Нельзя применить операцию OR к значениям типов " ++ show typ ++ " и " ++ show typx)
 
         return (outvar, typ)
 
@@ -282,7 +282,7 @@ compileLogOp (var1, typ1) op (var2, typ2) = do
             return ()
 
         (_, _, _) ->
-            cerror $ "Cannot compare values of type " ++ show typ1 ++ " and " ++ show typ2
+            cerror $ "Нельзя сравнивать значения типов " ++ show typ1 ++ " и " ++ show typ2
 
     return outvar
 
@@ -324,7 +324,7 @@ compileStatement (Syn.StmtAssignment ident expr)= do
     ind <- ins Exec.INop
     (evar, etyp) <- compileExpression expr
     when (etyp /= vtyp) $
-        cerror $ "Cannot assign value of typ " ++ show etyp ++ " to a variable of type " ++ show vtyp
+        cerror $ "Нельзя присвоить значение типа " ++ show etyp ++ " к переменной типа " ++ show vtyp
     ins $ Exec.IMov evar ident
     return ind
 
@@ -332,7 +332,7 @@ compileStatement (Syn.StmtCondition cond thenB mElseB) = do
     firstInd <- ins  Exec.INop
     (cvar, ctype) <- compileExpression cond
     when (ctype /= TypeBool) $
-        cerror "IF operator's condition must be of type Bool"
+        cerror "Условие оператора IF должно быть типа Bool"
 
     notCvar <- tmpvar  (defaultOf TypeBool)
     ins $ Exec.INot cvar notCvar
@@ -358,17 +358,17 @@ compileStatement (Syn.StmtCondition cond thenB mElseB) = do
 compileStatement (Syn.StmtForLoop ident initv finv maybeStepv body) = do
     typ <- gettype ident
     when (typ /= TypeInt) $
-        cerror "FOR loop's parameter must be of integer type"
+        cerror "Параметр цикла for должен быть типа int"
 
     firstInd <- ins Exec.INop
 
     (initVar, initTyp) <- compileExpression initv
     when (initTyp /= TypeInt) $
-        cerror "FOR loop's initial value must be of integer type"
+        cerror "Начальное значение цикла for должно быть типа int"
 
     (finVar, finTyp) <- compileExpression finv
     when (finTyp /= TypeInt) $
-        cerror "FOR loop's final value must be of integer type"
+        cerror "Конечное значение цикла for должно быть типа int"
 
     -- Initial assignment
     ins $ Exec.IMov initVar ident
@@ -379,7 +379,7 @@ compileStatement (Syn.StmtForLoop ident initv finv maybeStepv body) = do
         Just stepv -> do
             (stepVar, stepTyp) <- compileExpression stepv
             when (stepTyp /= TypeInt) $
-                cerror "FOR loop's step value must be of integer type"
+                cerror "Значение шага для цикла должно быть типа int"
             return stepVar
 
     -- Condition check
@@ -400,7 +400,7 @@ compileStatement (Syn.StmtWhileLoop cond body) = do
     startInd <- ins Exec.INop
     (condVar, condTyp) <- compileExpression cond
     when (condTyp /= TypeBool) $
-        cerror "WHILE loops's condition must of type Bool"
+        cerror "Условие цикла While должно быть типа Bool "
 
     notCondVar <- tmpvar $ defaultOf TypeBool
     ins $ Exec.INot condVar notCondVar
@@ -442,7 +442,7 @@ compileBlock (Syn.BlockDecl idents styp) = do
     forM_ idents (\ident -> do
         isdef <- isdefined ident
         when isdef $
-            cerror $ "Variable " ++ show ident ++ " is already defined"
+            cerror $ "Переменная " ++ show ident ++ " уже обьявлена"
         _ <- ins $ Exec.IDecl ident (defaultOf typ)
         settype ident typ
         return ())

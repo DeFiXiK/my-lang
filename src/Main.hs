@@ -85,7 +85,7 @@ asmParseAndPrint path = do
         Right tokens ->
             case Syn.parse tokens of
                 Left (Syn.ParserError msg line pos) ->
-                    putStrLn ("S:" ++ show line ++ ":" ++ show pos ++ ": " ++ show msg)
+                    putStrLn ("S:" ++ show line ++ ":" ++ show pos ++ ": " ++ msg)
                 Right prg ->
                     case Comp.compile prg of
                         Left (Comp.Error msg) ->
