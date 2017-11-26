@@ -373,6 +373,8 @@ block = do
         (TokIdent _, TokAssignment) -> do
             stmt <- statement
             return $ BlockStmt stmt
+        (TokIdent _, _) -> do
+            parserError $ "Ожидался один из операторов: [" ++ show TokComma ++ ", " ++ show TokColon ++ ", " ++ show TokAssignment ++ "], получено " ++ show tt2
         _ -> do
             stmt <- statement
             return $ BlockStmt stmt

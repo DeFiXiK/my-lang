@@ -11,13 +11,13 @@ import           Traverse           (ASTTraversible (..))
 -- parseAndPrint :: String -> IO ()
 -- parseAndPrint path = do
 --     text <- TIO.readFile path
---     case parse text of
---         Left (ParserError line pos msg) ->
+--     case Tok.parse text of
+--         Left (Tok.ParserError line pos msg) ->
 --             putStrLn ("Строка:"++ show line ++ " Позиция:" ++ show pos ++ " Сообщение:" ++ msg)
 --         Right tokens -> do
---             let parserEntr = toParserEntries tokens
---             let keywrdsList = zip [0..] (toList keywordsTbl)
---             let opersList = zip [0..] (toList operatorsTbl)
+--             let parserEntr = Tok.toParserEntries tokens
+--             let keywrdsList = zip [0..] (toList Tok.keywordsTbl)
+--             let opersList = zip [0..] (toList Tok.operatorsTbl)
 
 --             putStrLn (tableName 0)
 --             forM_ keywrdsList printTableEntry
@@ -28,24 +28,24 @@ import           Traverse           (ASTTraversible (..))
 --             putStrLn ""
 
 --             putStrLn (tableName 2)
---             forM_ (zip [0..] $ toList $ peIdentsTable parserEntr) printTableEntry
+--             forM_ (zip [0..] $ toList $ Tok.peIdentsTable parserEntr) printTableEntry
 --             putStrLn ""
 
 --             putStrLn (tableName 3)
---             forM_ (zip [0..] $ toList $ peNumbersTable parserEntr) printTableEntry
+--             forM_ (zip [0..] $ toList $ Tok.peNumbersTable parserEntr) printTableEntry
 --             putStrLn ""
 
 --             putStrLn (tableName 4)
---             forM_ (peEntries parserEntr) printEntry
+--             forM_ (Tok.peEntries parserEntr) printEntry
 --             putStrLn ""
 
 -- printTableEntry :: (Show a) => (Int, a) -> IO ()
 -- printTableEntry (eNum, eVal) =
 --     putStrLn $ show eNum ++ " - " ++ show eVal
 
--- printEntry :: Entry -> IO()
+-- printEntry :: Tok.Entry -> IO()
 -- printEntry en =
---     putStrLn $ "(" ++ show (entryTable en) ++ "," ++ show (entryIndex en) ++ ")" ++ " - " ++ "Строка: " ++ show (entryLine en) ++ ";" ++ " Позиция:" ++ show (entryIndex en)
+--     putStrLn $ "(" ++ show (Tok.entryTable en) ++ "," ++ show (Tok.entryIndex en) ++ ")" ++ " - " ++ "Строка: " ++ show (Tok.entryLine en) ++ ";" ++ " Позиция:" ++ show (Tok.entryIndex en)
 
 -- tableName :: Int -> String
 -- tableName 0 = "Ключевые слова"
@@ -79,3 +79,4 @@ main :: IO ()
 main = do
     args <- getArgs
     synParseAndPrint $ head args
+    -- parseAndPrint $ head args
